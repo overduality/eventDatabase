@@ -30,6 +30,14 @@
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
+  #stage{transform-origin:center center;}
+  body.desktop-scaled{
+    height:100vh;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
   body{
     margin:0;
     background:var(--bg);
@@ -202,12 +210,20 @@
     background:var(--surface);display:flex;align-items:center;justify-content:center;
     cursor:pointer;font-size:1.1rem;
   }
-  .sheet-head .title{font-size:1.05rem;font-weight:700;}
+  .sheet-head .title{font-size:1.05rem;font-weight:700;flex:1;text-align:center;padding:0 0.5rem;}
   .sheet-head .close{
     width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line-strong);
     background:var(--surface);display:flex;align-items:center;justify-content:center;
     cursor:pointer;font-size:1rem;color:var(--ink-soft);
   }
+  .head-actions{display:flex;gap:0.5rem;margin-left:auto;margin-right:0.5rem;}
+  .icon-btn{
+    width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line-strong);
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:1.05rem;color:var(--ink-soft);
+  }
+  .icon-btn:active{transform:scale(0.92);}
+  .icon-btn-danger{color:#8A2A17;border-color:#E3B6AA;}
   .sheet-body{overflow-y:auto;padding:1rem 1.15rem 1.75rem;}
 
   /* Event list cards (overlap view) */
@@ -276,6 +292,7 @@
 </style>
 </head>
 <body>
+<div id="stage">
 <div class="app">
   <header class="top">
     <div class="eyebrow">Cabang &middot; Jabodetabek</div>
@@ -331,6 +348,8 @@
     <div class="sheet-body" id="sheetBody"></div>
   </div>
 </div>
+</div>
+
 
 <script>
 /* =========================================================================
@@ -353,16 +372,14 @@ const CONFIG = {
     // Dua field baru untuk dukung fitur edit/hapus. Tambahkan dulu 2 pertanyaan
     // baru di Google Form ("ID Event" dan "Aksi"), lalu isi entry ID-nya di sini.
     // Lihat SETUP.md bagian "Menambahkan fitur edit & hapus".
-    eventId: 'entry.1290345641',
-    action: 'entry.1663854851'
+    eventId: 'entry.GANTI_EVENTID',
+    action: 'entry.GANTI_ACTION'
   },
   // Kode admin sederhana untuk mengunci tombol Edit/Hapus. Ini BUKAN keamanan
   // yang kuat (siapa pun yang buka kode halaman ini bisa melihat kodenya) —
   // tujuannya cuma mencegah orang iseng menghapus/mengedit event tanpa sengaja
   // atau tanpa tahu kodenya. Ganti sesuka hati, cukup edit baris ini.
-  ADMIN_PIN: '070000'
-
-  
+  ADMIN_PIN: 'GANTI_KODE_ADMIN'
 };
 CONFIG.configured = !CONFIG.FORM_ACTION_URL.includes('GANTI_DENGAN');
 CONFIG.sheetConfigured = !CONFIG.SHEET_GVIZ_URL.includes('GANTI_DENGAN');
@@ -464,6 +481,30 @@ function init(){
 
   setupSwipe();
   fetchSheetEvents();
+  fitDesktopScale();
+  window.addEventListener('resize', fitDesktopScale);
+}
+
+// Di layar lebar (komputer), tampilan mobile ini "ditarik" (di-scale) supaya
+// mengisi sekitar 70% layar tanpa perlu scroll — tanpa mengubah tata letak
+// atau ukuran relatif elemen sama sekali (persis proporsi versi HP).
+const DESKTOP_BREAKPOINT = 860;
+function fitDesktopScale(){
+  const stage = document.getElementById('stage');
+  if(window.innerWidth < DESKTOP_BREAKPOINT){
+    stage.style.transform = '';
+    document.body.classList.remove('desktop-scaled');
+    return;
+  }
+  document.body.classList.add('desktop-scaled');
+  stage.style.transform = 'scale(1)';
+  const naturalW = stage.offsetWidth;
+  const naturalH = stage.offsetHeight;
+  if(!naturalW || !naturalH) return;
+  const targetW = window.innerWidth * 0.7;
+  const targetH = window.innerHeight * 0.7;
+  const scale = Math.min(targetW / naturalW, targetH / naturalH);
+  stage.style.transform = `scale(${scale})`;
 }
 
 function setupSwipe(){
@@ -592,6 +633,7 @@ function renderMonth(){
     }
     grid.appendChild(cell);
   }
+  fitDesktopScale();
 }
 
 function openDateSheet(day, events, cellEl){
@@ -605,6 +647,8 @@ function openDateSheet(day, events, cellEl){
 }
 
 function renderListPage(){
+  const existingHeadActions = document.querySelector('.head-actions');
+  if(existingHeadActions) existingHeadActions.remove();
   const dateStr = currentDateEvents[0].date;
   const d = parseDate(dateStr);
   document.getElementById('sheetTitle').textContent = `${d.d} ${MONTH_NAMES[d.m]} ${d.y}`;
@@ -684,45 +728,31 @@ function openDetail(ev){
       <a class="btn btn-secondary" href="${escapeAttr(gmapsUrl)}" target="_blank" rel="noopener">Buka lokasi di Google Maps</a>
       ${ev.url ? `<a class="btn btn-secondary" href="${escapeAttr(ev.url)}" target="_blank" rel="noopener">Buka halaman event</a>` : ''}
       <a class="btn btn-primary" id="gcalBtn" target="_blank" rel="noopener">Tambah ke Google Calendar</a>
-      <button class="btn btn-secondary" id="icalBtn">Simpan file kalender (iCal)</button>
-    </div>
-    <div class="actions" style="margin-top:0.5rem;">
-      <button class="btn btn-secondary" id="editEvBtn">Edit event ini</button>
-      <button class="btn btn-secondary btn-danger" id="deleteEvBtn">Hapus event ini</button>
     </div>
   `;
   document.getElementById('gcalBtn').href = buildGoogleCalendarLink(ev);
-  document.getElementById('icalBtn').addEventListener('click', ()=> downloadIcs(ev));
+
+  // Tombol edit/hapus sebagai ikon kecil di pojok kanan atas sheet.
+  const oldHeadActions = document.querySelector('.head-actions');
+  if(oldHeadActions) oldHeadActions.remove();
+  const headActions = document.createElement('div');
+  headActions.className = 'head-actions';
+  headActions.innerHTML = `
+    <button class="icon-btn" id="editEvBtn" aria-label="Edit event" title="Edit event">&#9998;</button>
+    <button class="icon-btn icon-btn-danger" id="deleteEvBtn" aria-label="Hapus event" title="Hapus event">&#128465;</button>
+  `;
+  const closeBtnEl = document.getElementById('closeBtn');
+  closeBtnEl.parentNode.insertBefore(headActions, closeBtnEl);
+
   document.getElementById('editEvBtn').addEventListener('click', ()=>{
-    if(!checkAdminPin()) return;
     openAddEventSheet(ev);
   });
   document.getElementById('deleteEvBtn').addEventListener('click', ()=>{
-    if(!checkAdminPin()) return;
     const sure = confirm(`Yakin mau hapus "${ev.name}" dari kalender?`);
     if(!sure) return;
     submitAction('Hapus', ev.eventId || String(ev.id), {});
-    LOCAL_PENDING.push({ eventId: String(ev.eventId || ev.id), action:'Hapus' });
     closeSheet();
-    renderFilters();
-    renderMonth();
   });
-}
-
-// Gerbang sederhana sebelum Edit/Hapus. Ini pengingat/penghalang untuk orang iseng,
-// BUKAN keamanan yang benar-benar kuat — lihat catatan keamanan di SETUP.md.
-function checkAdminPin(){
-  if(!CONFIG.ADMIN_PIN || CONFIG.ADMIN_PIN.includes('GANTI_')){
-    alert('Kode admin belum diatur oleh pengelola kalender. Fitur edit/hapus belum bisa dipakai.');
-    return false;
-  }
-  const input = prompt('Masukkan kode admin untuk mengubah/menghapus event:');
-  if(input === null) return false;
-  if(input.trim() !== CONFIG.ADMIN_PIN){
-    alert('Kode admin salah.');
-    return false;
-  }
-  return true;
 }
 
 function closeSheet(){
@@ -785,6 +815,8 @@ function downloadIcs(ev){
 /* ========================= Tambah event (form) ========================= */
 
 function openAddEventSheet(editingEvent){
+  const existingHeadActions = document.querySelector('.head-actions');
+  if(existingHeadActions) existingHeadActions.remove();
   const isEdit = !!editingEvent;
   document.getElementById('backBtn').style.display = 'none';
   document.getElementById('sheetTitle').textContent = isEdit ? 'Edit event' : 'Tambah event baru';
@@ -883,17 +915,31 @@ function geocodeAddress(q){
 function submitToGoogleForm(payload){
   if(!CONFIG.configured) return Promise.resolve(false);
   const fd = new FormData();
-  fd.append(CONFIG.ENTRY.name, payload.name);
-  fd.append(CONFIG.ENTRY.date, payload.date);
-  fd.append(CONFIG.ENTRY.city, payload.city);
-  fd.append(CONFIG.ENTRY.address, payload.address);
+  fd.append(CONFIG.ENTRY.name, payload.name || '');
+  fd.append(CONFIG.ENTRY.date, payload.date || '');
+  fd.append(CONFIG.ENTRY.city, payload.city || '');
+  fd.append(CONFIG.ENTRY.address, payload.address || '');
   fd.append(CONFIG.ENTRY.url, payload.url || '');
   fd.append(CONFIG.ENTRY.notes, payload.notes || '');
+  if(CONFIG.editDeleteConfigured){
+    fd.append(CONFIG.ENTRY.eventId, payload.eventId || '');
+    fd.append(CONFIG.ENTRY.action, payload.action || 'Tambah');
+  }
   return fetch(CONFIG.FORM_ACTION_URL, {method:'POST', mode:'no-cors', body:fd})
     .then(()=>true).catch(()=>false);
 }
 
-function handleAddEventSubmit(alsoCalendar){
+// Kirim satu aksi (Tambah/Edit/Hapus) ke Google Form dan langsung terapkan
+// ke tampilan kalender di sesi ini juga (tidak perlu menunggu Sheet ter-refresh).
+function submitAction(action, eventId, fields){
+  const payload = {eventId, action, ...fields};
+  submitToGoogleForm(payload);
+  LOCAL_PENDING.push({eventId:String(eventId), action, ...fields});
+  renderFilters();
+  renderMonth();
+}
+
+function handleAddEventSubmit(alsoCalendar, editingEvent){
   const name = document.getElementById('fName').value.trim();
   const date = document.getElementById('fDate').value;
   const city = document.getElementById('fCity').value;
@@ -908,18 +954,32 @@ function handleAddEventSubmit(alsoCalendar){
     return;
   }
 
-  const newEvent = { id:'local-'+Date.now(), name, city, date, venue:address, address, url, notes };
+  const isEdit = !!editingEvent;
+  const eventId = isEdit ? String(editingEvent.eventId || editingEvent.id) : ('new-'+Date.now());
+  const fields = {name, date, city, address, url, notes};
 
-  if(CONFIG.configured){
-    submitToGoogleForm({name,date,city,address,url,notes});
+  if(CONFIG.editDeleteConfigured){
+    submitAction(isEdit ? 'Edit' : 'Tambah', eventId, fields);
+  }else{
+    // Belum ada dukungan edit/hapus (Form belum diberi 2 field tambahan) —
+    // tetap kirim sebagai data baru biasa seperti sebelumnya.
+    submitToGoogleForm({eventId, action:'Tambah', ...fields});
+    LOCAL_PENDING.push({eventId, action:'Tambah', ...fields});
+    renderFilters();
+    renderMonth();
   }
 
-  EXTRA_EVENTS.push(newEvent);
-  renderFilters();
-  renderMonth();
+  const newEvent = {id:eventId, eventId, ...fields, venue:address};
 
   if(alsoCalendar){
     downloadIcs(newEvent);
+  }
+
+  if(isEdit){
+    msg.textContent = 'Perubahan tersimpan.';
+    msg.className = 'form-msg success';
+    setTimeout(closeSheet, 700);
+    return;
   }
 
   msg.textContent = CONFIG.configured
@@ -948,35 +1008,25 @@ function normalizeSheetDate(v){
 
 function fetchSheetEvents(){
   if(!CONFIG.sheetConfigured) return;
-  
-  // Tambahkan anti-cache agar data langsung update saat di-refresh
-  const fetchUrl = CONFIG.SHEET_GVIZ_URL + '&t=' + Date.now();
-
+  const fetchUrl = CONFIG.SHEET_GVIZ_URL + (CONFIG.SHEET_GVIZ_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
   fetch(fetchUrl)
-    .then(r => r.text())
-    .then(text => {
-      const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
-      const json = JSON.parse(jsonString);
+    .then(r=>r.text())
+    .then(text=>{
+      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
       const rows = (json.table && json.table.rows) || [];
-      
-      const fetchedRows = [];
-      rows.forEach((row, i) => {
+      const fetched = [];
+      rows.forEach((row,i)=>{
         const c = row.c || [];
         const get = idx => (c[idx] && c[idx].v != null) ? String(c[idx].v) : '';
-        
-        // Asumsi urutan kolom di Sheet (sesuaikan jika berbeda):
-        // [0] Timestamp, [1] Nama, [2] Tanggal, [3] Kota, [4] Alamat, [5] URL, [6] Catatan, [7] ID Event, [8] Aksi
+        // Urutan kolom mengikuti urutan pertanyaan di Google Form:
+        // [0] Timestamp [1] Nama [2] Tanggal [3] Kota [4] Alamat [5] Link [6] Catatan [7] ID Event [8] Aksi
         const dateStr = normalizeSheetDate(get(2));
         if(!dateStr || !get(1)) return;
-
-        // Ambil data untuk fitur edit/hapus
-        const eventId = get(7) || ('sheet-' + i);
+        const eventId = get(7) || ('sheet-'+i);
         const action = get(8) || 'Tambah';
-
-        fetchedRows.push({
-          id: eventId,
-          eventId: eventId,
-          action: action,
+        fetched.push({
+          eventId,
+          action,
           name: get(1),
           city: get(3) || 'Lainnya',
           date: dateStr,
@@ -986,16 +1036,11 @@ function fetchSheetEvents(){
           notes: get(6)
         });
       });
-      
-      // SIMPAN KE SHEET_ROWS, bukan EXTRA_EVENTS
-      SHEET_ROWS = fetchedRows;
-      
+      SHEET_ROWS = fetched;
       renderFilters();
       renderMonth();
     })
-    .catch(err => {
-      console.error("Gagal memuat data dari Sheet:", err);
-    });
+    .catch(()=>{ /* diamkan; kalender tetap tampil pakai data yang sudah ada */ });
 }
 
 function icsEscape(s){
