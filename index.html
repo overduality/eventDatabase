@@ -797,17 +797,32 @@ function geocodeAddress(q){
   }).catch(()=>{ /* diamkan; pratinjau peta bersifat opsional */ });
 }
 
-function submitToGoogleForm(payload){
+unction submitToGoogleForm(payload){
   if(!CONFIG.configured) return Promise.resolve(false);
-  const fd = new FormData();
-  fd.append(CONFIG.ENTRY.name, payload.name);
-  fd.append(CONFIG.ENTRY.date, payload.date);
-  fd.append(CONFIG.ENTRY.city, payload.city);
-  fd.append(CONFIG.ENTRY.address, payload.address);
-  fd.append(CONFIG.ENTRY.url, payload.url || '');
-  fd.append(CONFIG.ENTRY.notes, payload.notes || '');
-  return fetch(CONFIG.FORM_ACTION_URL, {method:'POST', mode:'no-cors', body:fd})
-    .then(()=>true).catch(()=>false);
+  
+  // Ubah dari FormData ke URLSearchParams
+  const params = new URLSearchParams();
+  params.append(CONFIG.ENTRY.name, payload.name);
+  params.append(CONFIG.ENTRY.date, payload.date);
+  params.append(CONFIG.ENTRY.city, payload.city);
+  params.append(CONFIG.ENTRY.address, payload.address);
+  params.append(CONFIG.ENTRY.url, payload.url || '');
+  params.append(CONFIG.ENTRY.notes, payload.notes || '');
+
+  return fetch(CONFIG.FORM_ACTION_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+      // Beritahu Google bahwa ini adalah submit form standar
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params
+  })
+  .then(() => true)
+  .catch((err) => {
+    console.error("Gagal kirim ke form:", err);
+    return false;
+  });
 }
 
 function handleAddEventSubmit(alsoCalendar){
