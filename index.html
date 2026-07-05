@@ -30,14 +30,7 @@
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
-  #stage{transform-origin:center center;}
-  body.desktop-scaled{
-    height:100vh;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
+
   body{
     margin:0;
     background:var(--bg);
@@ -292,7 +285,6 @@
 </style>
 </head>
 <body>
-<div id="stage">
 <div class="app">
   <header class="top">
     <div class="eyebrow">Cabang &middot; Jabodetabek</div>
@@ -347,7 +339,6 @@
     </div>
     <div class="sheet-body" id="sheetBody"></div>
   </div>
-</div>
 </div>
 
 
@@ -481,31 +472,13 @@ function init(){
 
   setupSwipe();
   fetchSheetEvents();
-  fitDesktopScale();
-  window.addEventListener('resize', fitDesktopScale);
+  
 }
 
 // Di layar lebar (komputer), tampilan mobile ini "ditarik" (di-scale) supaya
 // mengisi sekitar 70% layar tanpa perlu scroll — tanpa mengubah tata letak
 // atau ukuran relatif elemen sama sekali (persis proporsi versi HP).
 const DESKTOP_BREAKPOINT = 860;
-function fitDesktopScale(){
-  const stage = document.getElementById('stage');
-  if(window.innerWidth < DESKTOP_BREAKPOINT){
-    stage.style.transform = '';
-    document.body.classList.remove('desktop-scaled');
-    return;
-  }
-  document.body.classList.add('desktop-scaled');
-  stage.style.transform = 'scale(1)';
-  const naturalW = stage.offsetWidth;
-  const naturalH = stage.offsetHeight;
-  if(!naturalW || !naturalH) return;
-  const targetW = window.innerWidth * 0.7;
-  const targetH = window.innerHeight * 0.7;
-  const scale = Math.min(targetW / naturalW, targetH / naturalH);
-  stage.style.transform = `scale(${scale})`;
-}
 
 function setupSwipe(){
   let startX=0, startY=0, tracking=false;
@@ -633,7 +606,6 @@ function renderMonth(){
     }
     grid.appendChild(cell);
   }
-  fitDesktopScale();
 }
 
 function openDateSheet(day, events, cellEl){
