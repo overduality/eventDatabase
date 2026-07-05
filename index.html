@@ -797,7 +797,7 @@ function geocodeAddress(q){
   }).catch(()=>{ /* diamkan; pratinjau peta bersifat opsional */ });
 }
 
-unction submitToGoogleForm(payload){
+function submitToGoogleForm(payload){
   if(!CONFIG.configured) return Promise.resolve(false);
   
   // Ubah dari FormData ke URLSearchParams
