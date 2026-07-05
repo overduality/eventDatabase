@@ -353,14 +353,16 @@ const CONFIG = {
     // Dua field baru untuk dukung fitur edit/hapus. Tambahkan dulu 2 pertanyaan
     // baru di Google Form ("ID Event" dan "Aksi"), lalu isi entry ID-nya di sini.
     // Lihat SETUP.md bagian "Menambahkan fitur edit & hapus".
-    eventId: 'entry.GANTI_EVENTID',
-    action: 'entry.GANTI_ACTION'
+    eventId: 'entry.1290345641',
+    action: 'entry.1663854851'
   },
   // Kode admin sederhana untuk mengunci tombol Edit/Hapus. Ini BUKAN keamanan
   // yang kuat (siapa pun yang buka kode halaman ini bisa melihat kodenya) —
   // tujuannya cuma mencegah orang iseng menghapus/mengedit event tanpa sengaja
   // atau tanpa tahu kodenya. Ganti sesuka hati, cukup edit baris ini.
-  ADMIN_PIN: 'GANTI_KODE_ADMIN'
+  ADMIN_PIN: '070000'
+
+  
 };
 CONFIG.configured = !CONFIG.FORM_ACTION_URL.includes('GANTI_DENGAN');
 CONFIG.sheetConfigured = !CONFIG.SHEET_GVIZ_URL.includes('GANTI_DENGAN');
