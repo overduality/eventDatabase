@@ -946,21 +946,35 @@ function normalizeSheetDate(v){
 
 function fetchSheetEvents(){
   if(!CONFIG.sheetConfigured) return;
-  fetch(CONFIG.SHEET_GVIZ_URL)
-    .then(r=>r.text())
-    .then(text=>{
-      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+  
+  // Tambahkan anti-cache agar data langsung update saat di-refresh
+  const fetchUrl = CONFIG.SHEET_GVIZ_URL + '&t=' + Date.now();
+
+  fetch(fetchUrl)
+    .then(r => r.text())
+    .then(text => {
+      const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}')+1);
+      const json = JSON.parse(jsonString);
       const rows = (json.table && json.table.rows) || [];
-      const extra = [];
-      rows.forEach((row,i)=>{
+      
+      const fetchedRows = [];
+      rows.forEach((row, i) => {
         const c = row.c || [];
         const get = idx => (c[idx] && c[idx].v != null) ? String(c[idx].v) : '';
-        // Urutan kolom mengikuti urutan pertanyaan di Google Form:
-        // [0] Timestamp  [1] Nama event  [2] Tanggal  [3] Kota  [4] Alamat  [5] Link sumber  [6] Catatan
+        
+        // Asumsi urutan kolom di Sheet (sesuaikan jika berbeda):
+        // [0] Timestamp, [1] Nama, [2] Tanggal, [3] Kota, [4] Alamat, [5] URL, [6] Catatan, [7] ID Event, [8] Aksi
         const dateStr = normalizeSheetDate(get(2));
         if(!dateStr || !get(1)) return;
-        extra.push({
-          id: 'sheet-'+i,
+
+        // Ambil data untuk fitur edit/hapus
+        const eventId = get(7) || ('sheet-' + i);
+        const action = get(8) || 'Tambah';
+
+        fetchedRows.push({
+          id: eventId,
+          eventId: eventId,
+          action: action,
           name: get(1),
           city: get(3) || 'Lainnya',
           date: dateStr,
@@ -970,11 +984,16 @@ function fetchSheetEvents(){
           notes: get(6)
         });
       });
-      EXTRA_EVENTS = extra;
+      
+      // SIMPAN KE SHEET_ROWS, bukan EXTRA_EVENTS
+      SHEET_ROWS = fetchedRows;
+      
       renderFilters();
       renderMonth();
     })
-    .catch(()=>{ /* diamkan; kalender tetap tampil pakai data yang sudah ada */ });
+    .catch(err => {
+      console.error("Gagal memuat data dari Sheet:", err);
+    });
 }
 
 function icsEscape(s){
