@@ -562,7 +562,6 @@ function renderMonth(){
       byDate[d.d].push(e);
     }
   });
-
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const leadingBlanks = (firstDay===0) ? 6 : firstDay-1;
   const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
